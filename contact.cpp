@@ -9,99 +9,64 @@ LANG: C++
 #include<map>
 #include<algorithm>
 #include<fstream>
+#include<vector>
 using namespace std;
 
-const int MAXN = 400000;
+const int MAXN = 200100;
 
 ifstream fin("contact.in");
 ofstream fout("contact.out");
 
-typedef struct
-{
-  string pattern;
-  int count;
-}frequencies;
-frequencies ar[MAXN];
+typedef string pattern;
+vector<pattern> ar[MAXN];
 
-bool sort1(frequencies a1, frequencies a2) {
-  int x = a1.pattern.length();
-  int y = a2.pattern.length();
-  if(a1.count == a2.count) {
-    if(x == y) {
-      return a1.pattern < a2.pattern;
-    }
-    else
-    {
-      return x < y;
-    }
+bool sort_cmp(pattern a, pattern b) {
+  if (a.length() == b.length()) {
+    return a < b;
+  } else {
+    return a.length() < b.length();
   }
-  return a1.count > a2.count;
 }
 
 int main() {
-  string str1;
-  string str2;
-  map<string,int> mymap;
+  string S, tmp;
+  map<string, int> mymap;
   int A, B, N;
+
   fin >> A >> B >> N;
-  str1 = "";
-  while(fin >> str2) {
-    str1 += str2;
+  while(fin >> tmp) {
+    S += tmp;
   }
-  int length1 = str1.length();
-  for(int i = 0; i < length1; i++) {
-    for(int j = A; j <= B; j++)
-    {
-      if ((i+j) <= length1) {
-        str2 = str1.substr(i,j);
-        mymap[str2]++;
-      }
-      else {
-        continue;
-      }
+
+  for(int i = 0; i < S.length(); i++) {
+    for(int j = A; i + j <= S.length() && j <= B; j++) {
+      mymap[S.substr(i, j)]++;
     }
   }
-  int w = 1;
+
   for(map<string,int>::iterator it = mymap.begin(); it != mymap.end(); it++) {
-    ar[w].pattern = it->first;
-    ar[w].count = it->second;
-    w++;
+    pattern p = it->first;
+    int count = it->second;
+    ar[count].push_back(p);
   }
-  sort(ar + 1, ar + w, sort1);
-  int numCount = 1;
-  int x = ar[1].count;
-  int y = 1;
-  fout << x << endl;
-  fout << ar[1].pattern;
-  for(int i = 2; i < w; i++) {
-    if (ar[i].count== ar[i-1].count) {
-      if (numCount == 0) {
-        fout << ar[i].pattern;
-      }
-      else {
-        fout << " " << ar[i].pattern;
-      }
-      numCount++;
-      if(numCount == 6) {
+
+  int freqs_printed = 0;
+  for(int i = MAXN - 1; freqs_printed < N && i >= 0; --i) {
+    vector<pattern> &v = ar[i];
+    if (v.size() == 0) continue;
+
+    fout << i << "\n";
+    ++freqs_printed;
+    sort(v.begin(), v.end(), sort_cmp);
+    for (int j = 0; j < v.size(); ++j) {
+      fout << v[j];
+      if (j + 1 == v.size() || j % 6 == 5) {
         fout << "\n";
-        numCount = 0;
+      } else {
+        fout << " ";
       }
     }
-    else {
-      if (N == y) {
-        break;
-      }
-      if(numCount != 0) {
-        fout << "\n";
-      }
-      fout << ar[i].count << "\n";
-      fout << ar[i].pattern;
-      numCount = 1;
-      y++;
-    }
   }
-  if(numCount != 0) {
-    fout << "\n";
-  }
+
   return 0;
 }
