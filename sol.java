@@ -2,120 +2,130 @@ import java.util.*;
 import java.lang.*;
 import java.io.*;
 
-public class Main {
+// this seems more convenient than HashMap<>
+class DefaultHashMap<K,V> extends HashMap<K,V> {
+  protected V defaultValue;
+  public DefaultHashMap(V defaultValue) {
+    this.defaultValue = defaultValue;
+  }
+  @Override
+  public V get(Object k) {
+    return containsKey(k) ? super.get(k) : defaultValue;
+  }
+}
+class Main {
+    final static int MAXN = 100100;
+    final static int BLOCK_SIZE = 300; // approximate is good enough. Math.sqrt is quite expensive
 
-    static int n;
-    static int m;
+    // moving this class higher up, instead of below the template
+    class Query {
+        int l;
+        int r;
+        int ind;
+
+        int block;
+
+        public Query(int pl, int pr, int pi)
+        {
+            l = pl;
+            r = pr;
+            ind = pi;
+            block = l / BLOCK_SIZE;
+        }
+    }
+
+    int n, m;
+
+    // move important variables to a more "global" scope
+    // i guess in java they're called fields
+    // this way, they are easily found (when reading the code)
+    // they are also readily available from helper functions
+
+    List<Query> queries = new ArrayList<>();
+    Map<Integer, Integer> hsh = new DefaultHashMap<Integer, Integer>(0);
+    Set<Integer> valid = new HashSet<>();
+    int[] nums = new int[MAXN];
+    int[] ans = new int[MAXN];
+
+    // update valid by inserting or deleting num
+    void check(int num) {
+        if (hsh.get(num) == num) {
+            valid.add(num);
+        } else {
+            valid.remove(num); // ensure that num not in valid
+        }
+    }
+
+    // remove a guy from hsh
+    void remove(int num) {
+        hsh.put(num, hsh.get(num) - 1);
+        check(num);
+    }
+
+    // insert a guy to hsh,
+    void insert(int num) {
+        hsh.put(num, hsh.get(num) + 1);
+        check(num);
+    }
 
     void run() throws Exception {
-
-//// sample program begins here
-//        int a, b;
-//        a = nextInt();
-//        b = nextInt();
-//        out.println(a + b);
-
         n = nextInt();
         m = nextInt();
-        int[] nums = new int[n];
-        for(int i = 0; i < n; i++)
-        {
+        for(int i = 0; i < n; i++) {
             nums[i] = nextInt();
         }
 
-        CC c = new CC();
-        TreeSet<Query> tr = new TreeSet<>(c);
-
-        for(int i = 0; i < m; i++)
-        {
-            tr.add(new Query(nextInt()-1, nextInt()-1, i)); // reindex
+        for(int i = 0; i < m; i++) {
+            int l = nextInt(), r = nextInt();
+            l--; r--; // use 0-indexing
+            queries.add(new Query(l, r, i));
         }
+        Collections.sort(queries, new CC()); // sort by sqrt-bucket (Mo's alg)
 
-        int curL = 0;
-        int curR = 0;
+        int curL = 0, curR = 0; // put "paired" variables on the same line
+        for (Query q: queries) {
+            int l = q.l, r = q.r+1;
+            // we set r = q.r+1 so that we are comparing half-open intervals [curL, curR) to half-open intervals [l,r).
+            // the comparisons become more sensible this way (and look more symmetric), so we are less likely to bug here
 
-        HashMap<Integer, Integer> hsh = new HashMap<>();
-
-        HashSet<Integer> valid = new HashSet<>();
-
-        int[] ans = new int[m];
-
-        while(tr.size() > 0)
-        {
-            Query q = tr.pollFirst();
-
-            int l = q.l;
-            int r = q.r;
-
-            while(curL < l)
-            {
-                // need to remove curL
-                if(!hsh.containsKey(nums[curL])) hsh.put(nums[curL], -1);
-                else hsh.put(nums[curL], hsh.get(nums[curL]) - 1);
-
-                int val = hsh.get(nums[curL]);
-                if(val == nums[curL]) valid.add(nums[curL]);
-                else if(val != nums[curL] && valid.contains(nums[curL])) valid.remove(nums[curL]);
+            while(curL < l) {
+                remove(nums[curL]);
                 curL++;
             }
-            while(curL > l)
-            {
-                if(!hsh.containsKey(nums[curL-1])) hsh.put(nums[curL-1], 1);
-                else hsh.put(nums[curL-1], hsh.get(nums[curL-1])+1);
+
+            while(curL > l) {
+                insert(nums[curL-1]);
                 curL--;
-
-                int val = hsh.get(nums[curL]);
-
-                if(val == nums[curL]) valid.add(nums[curL]);
-                else if(val != nums[curL] && valid.contains(nums[curL])) valid.remove(nums[curL]);
             }
-            while(curR <= r)
-            {
-                if(!hsh.containsKey(nums[curR])) hsh.put(nums[curR], 1);
-                else hsh.put(nums[curR], hsh.get(nums[curR])+1);
-
-
-                int val = hsh.get(nums[curR]);
-
-                if(val == nums[curR]) valid.add(nums[curR]);
-                else if(val != nums[curR] && valid.contains(nums[curR])) valid.remove(nums[curR]);
-
-
+            while(curR < r) {
+                insert(nums[curR]);
                 curR++;
             }
-            while(curR > r+1)
+            while(curR > r)
             {
-                if(!hsh.containsKey(nums[curR-1])) hsh.put(nums[curR-1], -1);
-                else hsh.put(nums[curR-1], hsh.get(nums[curR-1]) - 1);
+                remove(nums[curR-1]);
                 curR--;
-
-                int val = hsh.get(nums[curR]);
-
-                if(val == nums[curR]) valid.add(nums[curR]);
-                else if(val != nums[curR] && valid.contains(nums[curR])) valid.remove(nums[curR]);
             }
-
-
-//            int check = 0;
-//
-//            for(int key : hsh.keySet())
-//            {
-//                if(key == hsh.get(key))
-//                {
-//                    check++;
-//                }
-//            }
-
             ans[q.ind] = valid.size();
-
         }
 
-        for(int i = 0; i < ans.length; i++)
-        {
+        for(int i = 0; i < m; i++) {
             out.println(ans[i]);
         }
         in.close();
         out.close();
+    }
+
+    // moving this code above template stuff
+    static class CC implements Comparator<Query>
+    {
+        public int compare(Query c1, Query c2)
+        {
+            // slightly easier to read this way
+            // Java's compare is traditionally implemented using the - operator
+            if (c1.block == c2.block) return c1.r - c2.r;
+            else return c1.block - c2.block;
+        }
     }
 
     public static void main(String args[]) throws Exception {
@@ -152,29 +162,5 @@ public class Main {
         return st.nextToken();
     }
 
-    static class CC implements Comparator<Query>
-    {
-        public int compare(Query c1, Query c2)
-        {
-            if((int) (c1.l / Math.sqrt(n)) < (int) (c2.l / Math.sqrt(n))) return -1;
-            else if((int) (c2.l / Math.sqrt(n)) < (int) (c1.l / Math.sqrt(n))) return 1;
-            else if(c1.r < c2.r) return -1;
-            else return 1;
-        }
-    }
 
-}
-
-class Query
-{
-    int l;
-    int r;
-    int ind;
-
-    public Query(int pl, int pr, int pi)
-    {
-        l = pl;
-        r = pr;
-        ind = pi;
-    }
 }
